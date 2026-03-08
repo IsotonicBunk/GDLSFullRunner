@@ -1,104 +1,10 @@
 import requests
 import json
-import base64
 from random import randint
-from time import ctime, sleep
-import subprocess
+from time import ctime
 
 BACKUP_FREQ = 10000
 
-def getRawDataFromId(id) :
-    url = 'http://www.boomlings.com/database/downloadGJLevel22.php'
-    headers = {'user-agent': '', 'Content-Type': 'application/x-www-form-urlencoded'}
-    payload = {'gameVersion': '22','binaryVersion':'35','gdw':'0','levelID':id,'secret':'Wmfd2893gb7'}
-
-    r = requests.post(url, headers=headers, data=payload)
-    return r.text
-
-
-
-def getUserInfo(userId) :
-    url = 'http://www.boomlings.com/database/getGJUserInfo20.php'
-    headers = {'user-agent': '', 'Content-Type': 'application/x-www-form-urlencoded'}
-    payload = {'gameVersion': '22','binaryVersion':'35','gdw':'0','targetAccountID':userId,'secret':'Wmfd2893gb7'}
-
-    r = requests.post(url, headers=headers, data=payload)
-    return r.text
-
-def kv_to_json(text: str) -> str:
-    parts = text.split(':')
-
-    if len(parts) % 2 != 0:
-        raise ValueError("An error occured when converting key:valuse to json. text:" + text)
-        #return {
-        #    'nan':text
-        #}
-
-    data = {parts[i]: parts[i+1] for i in range(0, len(parts), 2)}
-    #return json.dumps(data, ensure_ascii=False, indent=2)
-    return data
-def renameGdLevelKeys(oldJson):
-    oldJson = checkForMissingGdLevelKeys(oldJson)
-    oldJson["3"] = base64.b64decode(oldJson["3"]).decode('utf-8')
-    newJson = {
-        'id': oldJson["1"],
-        'name': oldJson["2"],
-        'description': oldJson["3"],
-        'version': oldJson["5"],
-        'playerID': oldJson["6"],
-        'difficultyDenominator': oldJson["8"],
-        'difficultyNumerator': oldJson["9"],
-        'downloads': oldJson["10"],
-        'setCompletes': oldJson["11"],
-        'officialSong': oldJson["12"],
-        'gameVersion': oldJson["13"],
-        'likes': oldJson["14"],
-        'length': oldJson["15"],
-        'dislikes': oldJson["16"],
-        'demon': oldJson["17"],
-        'stars': oldJson["18"],
-        'featureScore': oldJson["19"],
-        'auto': oldJson["25"],
-        'recordString': oldJson["26"], 
-        'password': oldJson["27"],
-        'uploadDate': oldJson["28"],
-        'updateDate': oldJson["29"],
-        'copiedID': oldJson["30"],
-        'twoPlayer': oldJson["31"],
-        'customSongID': oldJson["35"],
-        'extraString': oldJson["36"],
-        'coins': oldJson["37"],
-        'verifiedCoins': oldJson["38"],
-        'starsRequested': oldJson["39"],
-        'lowDetailMode': oldJson["40"],
-        'dailyNumber': oldJson["41"],
-        'epic': oldJson["42"],
-        'demon Difficulty': oldJson["43"],
-        'isGauntlet': oldJson["44"],
-        'objects': oldJson["45"],
-        'editorTime': oldJson["46"],
-        'editorTime(Copies)': oldJson["47"],
-        'settingsString': oldJson["48"],
-        'songIDs': oldJson["52"],
-        'sfxIDs': oldJson["53"],
-        'unknown': oldJson["54"],
-        'verificationTime': oldJson["57"]
-            
-        }    
-
-    return newJson
-
-def checkForMissingGdLevelKeys(trgJson): # шо за дебильное название
-    checkedJson = trgJson
-    tmpKey = 0 
-    while tmpKey < 58:
-        tmpKey = tmpKey + 1
-        if str(tmpKey) in trgJson:
-            pass
-        else:
-            checkedJson[str(tmpKey)] = ''
-    return checkedJson
-    
 def get_info(level_id):
     url = f"https://gdbrowser.com/api/level/{level_id}"
     
@@ -187,6 +93,17 @@ except:
         data = {}
 
 try:
+    with open('lastid.txt', 'r', encoding='utf-8') as f:
+        file = f.read()
+        id = int(file)
+        print(f'Last downloaded level ID successfully loaded (last id is {id})')
+except:
+    print('lastid.txt is not found')
+    with open('lastid.txt', 'w', encoding='utf-8') as f:
+        f.write("127")
+        id = 127
+
+try:
     with open('data-temp.json', 'r', encoding='utf-8') as f:
         file = f.read()
         data_cl = json.loads(file)
@@ -219,21 +136,16 @@ except: pass
 
 old_data_len = len(data.keys()) + len(data_cl.keys())
 data_cl = {}
-#proxyListUrl = "https://proxylist.geonode.com/api/proxy-list?anonymityLevel=elite&limit=500&page=1&sort_by=lastChecked&sort_type=desc"
 while True:
-    #proxyList = requests.get(proxyListUrl).json
-    #print(proxyList)
-    #proxyUrl = proxyList['data'][randint(0, 499)]
-    #subprocess.call("set proxy" + proxyUrl['ip'] + ':' + proxyUrl['port'])
     try:
-        id = randint(128, 118028738)
+        id += 1
         if str(id) in data.keys() or str(id) in data_cl.keys():
             print(f'ID {id} is already exist')
             exist_levels.append(id)
             with open('exist-levels.json', 'w', encoding='utf-8') as f:
                 f.write(json.dumps(exist_levels))
             continue
-        level = renameGdLevelKeys(kv_to_json(getRawDataFromId(id)))
+        level = get_info(id)
         if level != None:
             data_cl[level['id']] = level
             print('<', end='')
@@ -241,7 +153,7 @@ while True:
                 f.write(json.dumps(data_cl))
             print('>')
             print(f'\nData length: {len(data_cl.keys()) + old_data_len} ({len(data_cl.keys())})\n')
-            print(f"""[{ctime()}]\n{level['name']} by {level['playerID']} (creator's player ID)
+            print(f"""[{ctime()}]\n{level['name']} by {level['author']}
         
 Likes: {level['likes']}
 Downloads: {level['downloads']}
@@ -256,11 +168,8 @@ Version: {level['gameVersion']}
             with open(f'bckp\data ({len(data_cl.keys()) + old_data_len}) (auto).json', 'w', encoding='utf-8') as f:
                 f.write(json.dumps({**data, **data_cl}))
             print(f'Data and data temp successfully merged (len is {len(data.keys()) + len(data_cl.keys())})')
-
+        with open('lastid.txt', 'w', encoding='utf-8') as f:
+                f.write(str(id))
     except Exception as e:
         print(ctime(), e)
     # input()
-    
-    print("Cooldown for 7 seconds")
-    sleep(7)
-    print("Cooldown ended!")

@@ -3,7 +3,6 @@ import json
 import base64
 from random import randint
 from time import ctime, sleep
-import subprocess
 
 BACKUP_FREQ = 10000
 
@@ -219,12 +218,18 @@ except: pass
 
 old_data_len = len(data.keys()) + len(data_cl.keys())
 data_cl = {}
-#proxyListUrl = "https://proxylist.geonode.com/api/proxy-list?anonymityLevel=elite&limit=500&page=1&sort_by=lastChecked&sort_type=desc"
+downloadTries = 0
+
 while True:
-    #proxyList = requests.get(proxyListUrl).json
-    #print(proxyList)
-    #proxyUrl = proxyList['data'][randint(0, 499)]
-    #subprocess.call("set proxy" + proxyUrl['ip'] + ':' + proxyUrl['port'])
+    if downloadTries == 20:
+        print("You sent 20 requests. Cooldown for 61 seconds...")
+        for i in range(6):
+            sleep(10)
+            i -= 10
+            print(i + "seconds remaining")
+        sleep(1)
+        print("Cooldown ended!")
+    downloadTries += 1
     try:
         id = randint(128, 118028738)
         if str(id) in data.keys() or str(id) in data_cl.keys():
@@ -260,7 +265,3 @@ Version: {level['gameVersion']}
     except Exception as e:
         print(ctime(), e)
     # input()
-    
-    print("Cooldown for 7 seconds")
-    sleep(7)
-    print("Cooldown ended!")
