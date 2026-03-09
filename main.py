@@ -29,7 +29,12 @@ def kv_to_json(text: str) -> str:
     parts = text.split(':')
 
     if len(parts) % 2 != 0:
-        raise ValueError("An error occured when converting key:valuse to json. text:" + text)
+        raise ValueError("Response:" + text)
+        #return {
+        #    'nan':text
+        #}
+    if len(parts) < 10:
+        raise ValueError("Response:" + text)
         #return {
         #    'nan':text
         #}
@@ -219,12 +224,23 @@ except: pass
 
 old_data_len = len(data.keys()) + len(data_cl.keys())
 data_cl = {}
+downloadTries = 0
 #proxyListUrl = "https://proxylist.geonode.com/api/proxy-list?anonymityLevel=elite&limit=500&page=1&sort_by=lastChecked&sort_type=desc"
 while True:
     #proxyList = requests.get(proxyListUrl).json
     #print(proxyList)
     #proxyUrl = proxyList['data'][randint(0, 499)]
     #subprocess.call("set proxy" + proxyUrl['ip'] + ':' + proxyUrl['port'])
+    if downloadTries == 20:
+        print("You sent 20 requests! Cooldown for 70 seconds...")
+        cooldownRemain = 70
+        while cooldownRemain != 0:
+            print((str(cooldownRemain) + " seconds remaining..."), end='\r')
+            cooldownRemain -= 1
+            sleep(1)
+        print("Cooldown ended!")
+    downloadTries += 1
+
     try:
         id = randint(128, 118028738)
         if str(id) in data.keys() or str(id) in data_cl.keys():
@@ -261,6 +277,6 @@ Version: {level['gameVersion']}
         print(ctime(), e)
     # input()
     
-    print("Cooldown for 7 seconds")
-    sleep(7)
-    print("Cooldown ended!")
+    #print("Cooldown for 7 seconds")
+    #sleep(7)
+    #print("Cooldown ended!")
